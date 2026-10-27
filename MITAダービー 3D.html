@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MITAダービー 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef2f7;--ink:#13203a;--mut:#5b6b86;--line:#b7c4da;--card:#fff;--acc:#ffc400;--bad:#c4222f;--good:#17804a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1829;--ink:#e9eefb;--mut:#93a3c2;--line:#3a4d73;--card:#15233d;--bad:#ff7b86;--good:#5fd99a}}
+:root[data-theme="dark"]{--bg:#0e1829;--ink:#e9eefb;--mut:#93a3c2;--line:#3a4d73;--card:#15233d;--bad:#ff7b86;--good:#5fd99a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:500 15px/1.5 "Zen Maru Gothic",system-ui,sans-serif}
+main{max-width:680px;margin:0 auto;padding:14px 10px 28px}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+h1{margin:0;font:400 clamp(1.4rem,6vw,2rem)/1.1 "Dela Gothic One",sans-serif;background:var(--acc);color:#13203a;padding:.15em .5em;transform:skewX(-8deg)}
+.bank{text-align:right;line-height:1.1}.bank span{font-size:.75rem;color:var(--mut)}.bank b{display:block;font-size:1.5rem}
+#stage{position:relative;height:min(46vh,340px);border-radius:14px;overflow:hidden;background:#9ad0f0;margin-bottom:6px}
+#lap{position:absolute;top:8px;left:10px;background:rgba(15,26,46,.75);color:#fff;font-weight:700;padding:2px 10px;border-radius:8px;font-size:.85rem}
+#vw{position:absolute;top:8px;right:10px;min-height:36px;padding:0 12px;border:0;border-radius:8px;background:rgba(15,26,46,.75);color:#fff;font:700 .85rem "Zen Maru Gothic",sans-serif;cursor:pointer}
+#cv{display:block;width:100%;height:100%}
+#log{white-space:pre-line;min-height:4.2em;margin:0 0 8px;font-size:.85rem;color:var(--mut)}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+#ppl{margin-bottom:6px}
+#board{display:flex;flex-wrap:wrap;gap:4px 8px;margin:0 0 8px;font-size:.85rem}#board:empty{display:none}#board span{padding:0 8px;border-radius:6px}#board .cur{background:var(--acc);color:#13203a;font-weight:700}
+#sum{margin:0 0 8px;min-height:1.5em}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chip,.go,#reset{font:700 .95rem "Zen Maru Gothic",sans-serif;min-height:44px;border-radius:10px;cursor:pointer}
+.chip{padding:0 14px;border:2px solid var(--line);background:transparent;color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:disabled,.go:disabled{opacity:.4;cursor:not-allowed}
+.go{width:100%;border:0;background:var(--acc);color:#13203a;font-size:1.1rem}
+#reset{width:100%;margin-top:6px;border:2px solid var(--bad);background:transparent;color:var(--bad)}
+button:focus-visible,.lane:has(input:focus-visible){outline:3px solid var(--ink);outline-offset:2px}
+#res{margin-top:10px;padding-top:10px;border-top:2px dashed var(--line)}
+#res .big{font-weight:700;font-size:1.1rem;margin:0 0 4px}.win{color:var(--good)}.lose{color:var(--bad)}
+.lane{display:grid;grid-template-columns:1.5rem 1.6rem 1fr 4.6rem;gap:6px;align-items:center;min-height:40px;margin-bottom:2px;padding:0 6px;border-radius:10px;cursor:pointer;position:relative}
+.lane input{position:absolute;opacity:0;pointer-events:none}
+.lane:has(input:checked){background:color-mix(in srgb,var(--acc) 30%,transparent);box-shadow:0 0 0 2px var(--acc)}
+.lane b{color:var(--mut);text-align:center}.lane .nm{font-weight:700}
+.od{font-weight:700;font-size:.9rem;line-height:1.1;text-align:right}.od small{display:block;font-size:.68rem}
+.nm small{display:block;font-size:.68rem;font-weight:500}
+.up{color:var(--good)}.dn{color:var(--bad)}.md{color:var(--mut)}
+.note{font-size:.78rem;color:var(--mut);margin:8px 0 0}
+</style>
+</head>
+<body>
+<main>
+<header><h1>MITAダービー</h1><div class="bank"><span>コイン</span><b id="coin">1000</b></div></header>
+<div id="stage"><canvas id="cv" aria-label="レースの3D映像"></canvas><div id="lap">1/2周</div><button id="vw" type="button">上から見る</button></div>
+<p id="log" aria-live="polite"></p>
+<section class="panel">
+<div class="chips" id="ppl" role="group" aria-label="遊ぶ人数"></div>
+<p id="board"></p>
+<p id="sum"></p>
+<div class="chips" id="kind" role="group" aria-label="賭け方"></div>
+<div class="chips" id="chips"></div>
+<button class="go" id="go">スタート</button>
+<button id="reset" hidden>コインを1000に戻す</button>
+<div id="res" hidden></div>
+</section>
+<div id="lanes" role="group" aria-label="賭けるキャラ（複数選べます）"></div>
+<p class="note">ゲーム内のコインだけで遊びます。校長は、コースの内側に見える木々を見ると興奮して加速し、トイレを見ると失速します。楕円のコースを2周します。人数を選ぶと、1台を回して順番に賭けるみんなモードで遊べます。毎レース、12体の中からランダムで7体が出走し、枠順と調子も変わります。オッズはその顔ぶれをもとに計算されます。</p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const C=[
+{n:'校長',e:'👨‍🏫',b:4.4},{n:'暴走族',e:'🏍️',b:4.6},{n:'嵐(仮)',e:'🌪️',b:4.0},{n:'センチネル',e:'🤖',b:4.7},
+{n:'キム',e:'🚀',b:3.1},{n:'学園長',e:'🎓',b:4.0},{n:'椅子破壊王',e:'🪑',b:4.0},{n:'おじいちゃん',e:'👴',b:2.7},
+{n:'多動形',e:'⚡',b:4.0},{n:'戦車',e:'🪖',b:2.9},{n:'源頼朝もどき',e:'📜',b:3.9},{n:'自我を持ったカメラ',e:'📷',b:4.0}];
+// 風景の位置（1周を0〜100として）。校長はここに見える木とトイレに反応する
+const GREEN=[[10,20],[56,66]],WC=[[38,44]],SPEED=1.4,LW=2.2,NL=7,R0=20,LS=60,LREF=2*LS+2*Math.PI*R0;
+const lp=x=>(x*2)%100; // 全体の進み(0-100)を1周ごとの位置(0-100)に直す
+const inz=(z,x)=>z.some(([a,b])=>x>=a&&x<b);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const condLab=v=>v>1?['絶好調','up']:v<1?['不調','dn']:['普通','md'];
+const pickCond=()=>{const r=Math.random();return r<.2?1.06:r<.8?1:.94};
+
+function makeRace(order,conds){
+  const R=order.map((c,i)=>({i,c,x:0,cd:conds?conds[i]:pickCond(),f:.97+Math.random()*.06,bm:1,sh:0,beam:false,done:false,
+    T:{slow:0,stun:0,boost:0,back:0,hop:0,shift:0}}));
+  return {t:0,R,fin:[],ev:[]};
+}
+function step(S,dt,log){
+  S.t+=dt;const R=S.R,t=S.t;
+  const ch=p=>Math.random()<p*dt;
+  const pk=a=>a[Math.random()*a.length|0];
+  const nb=l=>[l-1,l+1].filter(j=>R[j]&&!R[j].done);
+  const hit=(j,k,s)=>{const q=R[j];if(q&&!q.done)q.T[k]=Math.max(q.T[k],s)};
+  const say=(r,s)=>{if(log)S.ev.push(C[r.c].e+' '+C[r.c].n+s)};
+  const nm=j=>C[R[j].c].n;
+  for(const r of R){
+    if(r.done)continue;
+    const T=r.T;
+    switch(r.c){
+      case 1:if(ch(.09)){T.stun=1.4;say(r,'が事故った！')}break;
+      case 2:if(ch(.3)){const j=pk(nb(r.i));if(j!==undefined){hit(j,'slow',1.3);say(r,'が'+nm(j)+'を妨害')}}break;
+      case 3:if(ch(.1)&&!T.back){T.back=1.2;say(r,'が逆走している')}break;
+      case 4:
+        if(ch(.12)&&!T.boost){T.boost=1.8;r.bm=2.4;say(r,'が猛ダッシュ！')}
+        if(ch(.18)){const j=pk(nb(r.i));if(j!==undefined){hit(j,'slow',1.5);say(r,'のミサイルが'+nm(j)+'に命中')}}break;
+      case 5:if(ch(.25)){for(let j=r.i-2;j<=r.i+2;j++)if(j!==r.i)hit(j,'slow',.9);say(r,'が周りを遅くした')}break;
+      case 6:if(ch(.14)&&!T.boost){T.boost=1.1;r.bm=1.9;T.hop=1.1;say(r,'がジャンプ加速！')}break;
+      case 7:if(ch(.1)&&!T.boost){T.boost=2;r.bm=3.4;say(r,'がターボ発動！？')}break;
+      case 8:if(ch(.2)&&!T.shift){const j=pk(nb(r.i));if(j!==undefined){hit(j,'slow',1.1);T.shift=1.1;r.sh=j-r.i;say(r,'が'+nm(j)+'のレーンに侵入')}}break;
+      case 9:
+        if(ch(.22)){let b=null;for(const q of R)if(q!==r&&!q.done&&(!b||q.x>b.x))b=q;if(b){hit(b.i,'slow',1.2);say(r,'の砲撃が'+nm(b.i)+'に命中')}}
+        if(ch(.1)&&!T.boost){T.boost=1.5;r.bm=1.9;say(r,'が走り出した')}break;
+      case 10:
+        if(Math.sin(t*4.5)>.3)T.hop=.15;
+        if(ch(.25)){const q=pk(R.filter(o=>o!==r&&!o.done));if(q){hit(q.i,'slow',1);say(r,'が'+nm(q.i)+'に紙を投げた')}}break;
+      case 11:if(t>=11&&!r.beam){r.beam=true;say(r,'がレンズからビーム！')}break;
+    }
+    let sp=C[r.c].b*r.f*r.cd*(1+.07*Math.sin(t*1.9+r.i*2.3));
+    if(r.c===0){
+      const g=inz(GREEN,lp(r.x)),w=inz(WC,lp(r.x));
+      sp*=g?1.8:w?.3:1;
+      if(log&&(g||w)&&!r.seen){r.seen=1;say(r,g?'が緑を見て大興奮！':'がトイレを見て失速')}
+      if(!g&&!w)r.seen=0;
+    }
+    if(r.c===10)sp*=.1+2.6*Math.max(0,Math.sin(t*4.5));
+    if(r.c===11)sp*=t<11?.12:1.6;
+    if(T.boost>0)sp*=r.bm;
+    if(T.slow>0)sp*=.4;
+    if(T.stun>0)sp=0;
+    if(T.back>0)sp=-C[r.c].b*.5;
+    r.x=Math.max(0,r.x+sp*dt);
+    for(const k in T)T[k]=Math.max(0,T[k]-dt);
+    if(r.x>=100){r.done=true;r.x=100;S.fin.push(r.i)}
+  }
+}
+function calcOdds(order,conds){
+  const N=500,w=Array(NL).fill(0),pl=Array(NL).fill(0);
+  for(let n=0;n<N;n++){
+    const s=makeRace(order,conds);
+    while(s.fin.length<3&&s.t<90)step(s,.15,false);
+    const top=[...s.fin,...s.R.filter(r=>!s.fin.includes(r.i)).sort((a,b)=>b.x-a.x).map(r=>r.i)].slice(0,3);
+    w[top[0]]+=1;top.forEach(l=>{w[l]+=.2;pl[l]+=1});
+  }
+  const tot=w.reduce((a,b)=>a+b,0)+.5*NL;
+  return {win:w.map(v=>{const p=.9*(v+.5)/tot+.1/NL;return Math.min(99.9,Math.max(1.2,.85/p))}),
+    place:pl.map(c=>{const p=.9*(c+.5)/(N+1)+.1*3/NL;return Math.min(99.9,Math.max(1.1,.8/p))})};
+}
+
+/* ---------- 3D ---------- */
+const stage=document.getElementById('stage'),cv=document.getElementById('cv');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9ad0f0);scene.fog=new THREE.Fog(0x9ad0f0,90,230);
+const cam=new THREE.PerspectiveCamera(42,1.5,.5,400);
+scene.add(new THREE.HemisphereLight(0xffffff,0x6a8a5a,.85));
+const sun=new THREE.DirectionalLight(0xffffff,.7);sun.position.set(40,60,40);scene.add(sun);
+
+const mat=c=>new THREE.MeshLambertMaterial({color:c});
+const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d),Y=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,12),S=r=>new THREE.SphereGeometry(r,12,10),K=(r,h)=>new THREE.ConeGeometry(r,h,12);
+function P(g,geo,c,x=0,y=0,z=0,rz=0,rx=0){const m=new THREE.Mesh(geo,mat(c));m.position.set(x,y,z);m.rotation.z=rz;m.rotation.x=rx;g.add(m);return m}
+function text(txt,w,h,font,bg,fg){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  if(bg){x.fillStyle=bg;x.fillRect(0,0,w,h)}x.fillStyle=fg;x.font=font;x.textAlign='center';x.textBaseline='middle';x.fillText(txt,w/2,h/2+2,w-10);return new THREE.CanvasTexture(c)}
+
+// キャラの見た目（+x方向が前）
+const MK=[
+g=>{P(g,B(.5,.9,.5),0x222a44,0,.45);P(g,B(.9,1.1,.6),0x2b3a67,0,1.45);P(g,S(.4),0xf2c9a0,0,2.35);P(g,B(.08,.6,.2),0xd62839,.32,1.5);P(g,B(.5,.12,.7),0x888888,0,2.72)},
+g=>{[-.9,.9].forEach(x=>P(g,new THREE.TorusGeometry(.5,.14,8,16),0x222222,x,.6));P(g,B(2,.45,.5),0xd62839,0,1.1);P(g,B(.5,.8,.4),0x111111,-.1,1.7);P(g,S(.33),0xffffff,0,2.35)},
+g=>{g.userData.spin=P(g,K(1,2.4),0x8fa3b8,0,1.4,0,0,Math.PI);P(g,K(.4,.9),0xffd23f,0,.45)},
+g=>{P(g,B(1,1.3,.8),0x38b6c9,0,1.2);P(g,B(.8,.6,.7),0x2a8da0,0,2.15);P(g,S(.2),0xff2d2d,.42,2.2);P(g,Y(.04,.04,.6),0x888888,0,2.75)},
+g=>{P(g,Y(.4,.4,2.2),0xf4f4f4,0,1.3,0,Math.PI/2);P(g,K(.4,.9),0xe63946,1.55,1.3,0,-Math.PI/2);P(g,B(.5,.2,1.4),0xe63946,-.9,1.3);P(g,B(.5,.9,.1),0xe63946,-.9,1.3)},
+g=>{P(g,K(.8,1.9),0x6a3fa0,0,.95);P(g,S(.38),0xf2c9a0,0,2.2);P(g,B(1,.08,1),0x111111,0,2.62);P(g,B(.5,.2,.5),0x111111,0,2.5)},
+g=>{P(g,B(1.1,.2,1.1),0x8b5a2b,0,1);P(g,B(.15,1.1,1.1),0x8b5a2b,-.5,1.6);[[-.45,-.45],[-.45,.45],[.45,-.45],[.45,.45]].forEach(([x,z])=>P(g,Y(.07,.07,1),0x6b4220,x,.5,z));P(g,K(.35,.5),0xffcc00,-.5,2.4)},
+g=>{P(g,B(.6,.9,.5),0xd9c7a0,0,.8);P(g,S(.33),0xf2c9a0,0,1.6);P(g,S(.18),0xffffff,0,1.95);P(g,Y(.04,.04,1.2),0x6b4220,.5,.6,.2,-.3)},
+g=>{P(g,S(.65),0xffe14d,0,1.2);P(g,S(.3),0xf2c9a0,0,2);P(g,K(.2,.8),0xff7b00,0,2.6)},
+g=>{P(g,B(2.1,.6,1.2),0x4b6a3a,0,.7);P(g,B(.9,.5,.8),0x3d5a30,-.1,1.25);P(g,Y(.09,.09,1.5),0x2f4526,1.3,1.3,0,Math.PI/2);[-.7,.7].forEach(z=>P(g,B(2.3,.45,.25),0x222222,0,.4,z))},
+g=>{P(g,K(.75,1.7),0x3d5a80,0,.85);P(g,S(.35),0xf2c9a0,0,2.05);P(g,B(.25,.8,.3),0x111111,0,2.65,0,-.2);P(g,B(.4,.02,.3),0xffffff,.6,1.4)},
+g=>{P(g,B(1.2,.9,.9),0x1b1b1b,0,1.4);P(g,Y(.36,.36,.55),0xcfe8ff,.85,1.4,0,Math.PI/2);P(g,B(.3,.15,.3),0x444444,-.2,2)}];
+
+const stands=[];
+function pos(u,r){
+  const PR=Math.PI*R0;let s=((u*LREF+LS/2)%LREF+LREF)%LREF,x,z,tx,tz,nx,nz;
+  if(s<LS){x=-LS/2+s;z=-r;tx=1;tz=0;nx=0;nz=-1}
+  else if(s<LS+PR){const a=-Math.PI/2+(s-LS)/R0;x=LS/2+r*Math.cos(a);z=r*Math.sin(a);tx=-Math.sin(a);tz=Math.cos(a);nx=Math.cos(a);nz=Math.sin(a)}
+  else if(s<2*LS+PR){x=LS/2-(s-LS-PR);z=r;tx=-1;tz=0;nx=0;nz=1}
+  else{const a=Math.PI/2+(s-2*LS-PR)/R0;x=-LS/2+r*Math.cos(a);z=r*Math.sin(a);tx=-Math.sin(a);tz=Math.cos(a);nx=Math.cos(a);nz=Math.sin(a)}
+  return {x,z,tx,tz,nx,nz};
+}
+function stad(r,p){p.moveTo(-LS/2,-r);p.lineTo(LS/2,-r);p.absarc(LS/2,0,r,-Math.PI/2,Math.PI/2,false);p.lineTo(-LS/2,r);p.absarc(-LS/2,0,r,Math.PI/2,Math.PI*1.5,false)}
+function ring(ri,ro,col,y){const sh=new THREE.Shape();stad(ro,sh);if(ri>0){const h=new THREE.Path();stad(ri,h);sh.holes.push(h)}
+  const m=new THREE.Mesh(new THREE.ShapeGeometry(sh,24),new THREE.MeshLambertMaterial({color:col,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.y=y;scene.add(m)}
+function buildWorld(){
+  const g0=new THREE.Mesh(new THREE.PlaneGeometry(800,800),mat(0x62b05d));g0.rotation.x=-Math.PI/2;g0.position.y=-.05;scene.add(g0);
+  ring(0,R0-LW/2,0x4f9e52,0);
+  for(let i=0;i<NL;i++)ring(R0+(i-.5)*LW,R0+(i+.5)*LW,i%2?0x7a8dc2:0x6f82b8,.02);
+  // スタート兼ゴールの線とゲート
+  const zc=-(R0+(NL-1)/2*LW),sl=new THREE.Mesh(new THREE.PlaneGeometry(.6,NL*LW),mat(0xffffff));sl.rotation.x=-Math.PI/2;sl.position.set(0,.05,zc);scene.add(sl);
+  const gate=new THREE.Group(),z1=-(R0-LW/2-1),z2=-(R0+(NL-.5)*LW+1);
+  [z1,z2].forEach(z=>P(gate,B(.5,7,.5),0xeeeeee,0,3.5,z));
+  P(gate,B(.5,1.6,z1-z2),0xffc400,0,7,(z1+z2)/2);
+  const gs=new THREE.Sprite(new THREE.SpriteMaterial({map:text('GOAL',256,96,'bold 70px sans-serif',null,'#13203a')}));gs.scale.set(8,3,1);gs.position.set(0,9,zc);gate.add(gs);scene.add(gate);
+  // 内馬場の木（緑）。校長が反応する
+  GREEN.forEach(([a,b])=>{for(let u=a/100;u<b/100;u+=3.6/LREF)[R0-5,R0-9].forEach((r,k)=>{
+    const p=pos(u+(k?1.8/LREF:0),r),s=k?1.25:1,t=new THREE.Group();
+    P(t,Y(.35,.45,2),0x7a5230,0,1);P(t,K(1.9*s,4.2*s),0x2e8b4f,0,4);P(t,K(1.5*s,3.4*s),0x3aa862,0,5.6);t.position.set(p.x,0,p.z);scene.add(t)})});
+  // 内馬場のトイレ。校長が反応する
+  WC.forEach(([a,b])=>{const p=pos((a+b)/200,R0-10),t=new THREE.Group();
+    P(t,B(9,5,5),0xf3f6fa,0,2.5);P(t,B(9.4,.5,5.4),0x4aa8e8,0,5.2);P(t,B(1.4,3,.2),0x4aa8e8,-2,1.5,2.6);P(t,B(1.4,3,.2),0xe8808f,2,1.5,2.6);
+    const s=new THREE.Sprite(new THREE.SpriteMaterial({map:text('WC',128,128,'bold 80px sans-serif','#4aa8e8','#fff')}));s.scale.set(3,3,1);s.position.set(0,7.2,2.7);t.add(s);
+    t.position.set(p.x,0,p.z);t.rotation.y=Math.atan2(p.nx,p.nz);scene.add(t)});
+  // 観客と遠景（反応しない飾り）
+  for(let k=0;k<170;k++){const p=pos(k/170,R0+(NL-.5)*LW+3);P(scene,B(1.2,1.2,1.2),[0xe63946,0xffc400,0x4aa8e8,0xffffff,0x7bd88f][k%5],p.x,.7,p.z)}
+  for(let k=0;k<8;k++){const a=k*Math.PI/4+.3;P(scene,K(38+k%3*8,50),0x7d93ad,Math.cos(a)*170,25,Math.sin(a)*170)}
+}
+buildWorld();
+let actors=[],camSnap=true,view='follow';const camLook=new THREE.Vector3();
+function buildActors(){
+  actors.forEach(a=>scene.remove(a));actors=[];
+  S_.R.forEach((r,l)=>{const g=new THREE.Group();const m=new THREE.Group();g.add(m);g.userData.m=m;MK[r.c](m);
+    if(r.c===11){const bm=P(g,Y(.12,.12,40),0xff3030,21,1.4,0,Math.PI/2);bm.material=new THREE.MeshBasicMaterial({color:0xff3030});bm.visible=false;g.userData.beam=bm}
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:text((l+1)+' '+C[r.c].n,256,64,'bold 30px sans-serif','rgba(15,26,46,.8)','#fff'),depthTest:false}));sp.scale.set(4.6,1.15,1);sp.position.y=3.9;g.add(sp);
+    g.userData.ln=l;g.userData.sp=sp;scene.add(g);actors.push(g)});
+}
+function frame(ts){
+  const t=ts/1000;
+  if(phase==='run'){if(!last)last=ts;const dt=Math.min(.05,(ts-last)/1000)*SPEED;last=ts;step(S_,dt,true);
+    if(S_.fin.length>=3||S_.R.every(r=>r.done)||S_.t>90)finish()}
+  let lr=S_.R[0];
+  S_.R.forEach((r,l)=>{
+    if(r.x>lr.x)lr=r;
+    const g=actors[l],u=g.userData,T=r.T,m=u.m,run=phase==='run'&&!r.done&&T.stun<=0;
+    u.ln+=((l+(T.shift>0?r.sh:0))-u.ln)*.2;
+    const top=view==='top';m.scale.setScalar(top?2.2:1);u.sp.scale.set(top?8:4.6,top?2.1:1.15,1);
+    const p=pos(r.x/50,R0+u.ln*LW),lx=lp(r.x);
+    let y=run?Math.abs(Math.sin(t*11+l))*.22:0;
+    if(T.hop>0)y+=1.2*Math.sin(Math.min(1,T.hop%.5/.5)*Math.PI);
+    if(r.c===0&&run){if(inz(GREEN,lx))y+=Math.abs(Math.sin(t*22))*.7;else if(inz(WC,lx)){m.rotation.z=Math.sin(t*30)*.12}else m.rotation.z=0}
+    const jit=r.c===8&&run?Math.sin(t*35)*.3:0;
+    g.position.set(p.x+p.nx*jit,y,p.z+p.nz*jit);
+    g.rotation.y=Math.atan2(-p.tz,p.tx);
+    m.rotation.y=T.back>0?Math.PI:0;
+    m.rotation.x=T.stun>0?-.9:0;
+    if(r.c!==0)m.rotation.z=T.stun>0?-.5:0;
+    if(u.spin)u.spin.rotation.y+=.25;
+    if(u.beam)u.beam.visible=r.beam&&phase==='run';
+  });
+  // 先頭を外側から追うカメラ
+  const pl=pos(lr.x/50,R0+(NL-1)/2*LW);let cx=pl.x+pl.nx*22-pl.tx*6,cy=15,cz=pl.z+pl.nz*22-pl.tz*6,lx2=pl.x+pl.tx*8,lz2=pl.z+pl.tz*8;
+  if(view==='top'){const th=Math.tan(cam.fov*Math.PI/360);cy=Math.max(68/(th*cam.aspect),38/th)*1.04;cx=0;cz=6;lx2=0;lz2=0}
+  scene.fog.near=view==='top'?900:90;scene.fog.far=view==='top'?1500:230;
+  if(camSnap){cam.position.set(cx,cy,cz);camLook.set(lx2,0,lz2);camSnap=false}
+  cam.position.x+=(cx-cam.position.x)*.08;cam.position.y+=(cy-cam.position.y)*.08;cam.position.z+=(cz-cam.position.z)*.08;
+  camLook.x+=(lx2-camLook.x)*.1;camLook.z+=(lz2-camLook.z)*.1;cam.lookAt(camLook);
+  renderer.render(scene,cam);
+  $('#lap').textContent=Math.min(2,Math.floor(lr.x/50)+1)+'/2周';
+  $('#log').textContent=S_.ev.slice(-3).join('\n');
+  requestAnimationFrame(frame);
+}
+new ResizeObserver(()=>{const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}).observe(stage);
+
+/* ---------- UI ---------- */
+const $=s=>document.querySelector(s);
+const load=()=>{try{const v=localStorage.getItem('mita3d');const x=+v;return v===null||!isFinite(x)?1000:x}catch(e){return 1000}};
+const mk=n=>Array.from({length:n},()=>({coin:n===1?load():1000,picks:[],bet:100,kind:'win',stake:0,tot:0,pay:0,net:0}));
+let PL=mk(1),cp=0,phase='bet',S_,odd=[],last=0;
+const save=()=>{if(PL.length===1)try{localStorage.setItem('mita3d',PL[0].coin)}catch(e){}};
+const alive=()=>PL.map((p,i)=>i).filter(i=>PL[i].coin>0);
+const nextAlive=i=>{for(let k=i+1;k<PL.length;k++)if(PL[k].coin>0)return k;return -1};
+
+function newRace(){
+  S_=makeRace(shuffle([...C.keys()]).slice(0,NL));
+  odd=calcOdds(S_.R.map(r=>r.c),S_.R.map(r=>r.cd));
+  PL.forEach(p=>{p.picks=p.picks.filter(c=>S_.R.some(r=>r.c===c));p.bet=Math.min(p.bet,Math.max(p.coin,1))});
+  cp=alive()[0]??0;phase='bet';last=0;camSnap=true;
+  $('#res').hidden=true;buildActors();
+  $('#lanes').innerHTML=S_.R.map((r,l)=>{const [lb,cl]=condLab(r.cd);
+    return `<label class="lane"><input type="checkbox" name="p" value="${r.c}"><b>${l+1}</b><span>${C[r.c].e}</span><span class="nm">${C[r.c].n}<small class="${cl}">${lb}</small></span><span class="od">×${odd.win[l].toFixed(1)}<small class="md">複×${odd.place[l].toFixed(1)}</small></span></label>`}).join('');
+  ui();
+}
+function ui(){
+  const n=PL.length,Q=PL[cp],run=phase==='run',res=phase==='res',b=Q.bet,bet=phase==='bet';
+  $('.bank').hidden=n>1;$('#coin').textContent=PL[0].coin;
+  $('#ppl').innerHTML=[1,2,3,4,5,6].map(v=>`<button class="chip" data-n="${v}" aria-pressed="${v===n}"${run?' disabled':''}>${v===1?'ひとり':v+'人'}</button>`).join('');
+  $('#kind').innerHTML=[['win','単勝（1着）'],['place','複勝（3着以内）']].map(([k,t])=>`<button class="chip" data-k="${k}" aria-pressed="${Q.kind===k}"${bet?'':' disabled'}>${t}</button>`).join('');
+  $('#board').innerHTML=n>1?PL.map((p,i)=>`<span class="${bet&&i===cp?'cur':''}">プレイヤー${i+1} <b>${p.coin}</b></span>`).join(''):'';
+  const k=Q.picks.length,lane=k?S_.R.findIndex(r=>r.c===Q.picks[0]):-1;
+  $('#sum').hidden=!bet;
+  $('#sum').textContent=(n>1?`プレイヤー${cp+1}：`:'')+(k===0?'賭けたいキャラを下から選んでください（何頭でもOK）。'
+    :`${Q.picks.map(c=>C[c].e+C[c].n).join('、')} の${Q.kind==='win'?'単勝':'複勝'}に 1頭あたり ${b} コイン（合計 ${b*k}）`+(k===1?`。当たれば ${Math.floor(b*odd[Q.kind][lane])} コイン。`:'。'));
+  $('#chips').innerHTML=[100,300,500,1000,'全部'].map(v=>{const val=v==='全部'?Math.floor(Q.coin/Math.max(k,1)):v;
+    return `<button class="chip" data-v="${val}" aria-pressed="${val===b}"${!bet||val<1||val*Math.max(k,1)>Q.coin?' disabled':''}>${v}</button>`}).join('');
+  document.querySelectorAll('.lane input').forEach(i=>{i.checked=Q.picks.includes(+i.value);i.disabled=!bet});
+  const nx=nextAlive(cp),go=$('#go'),ok=k>0&&b>=1&&b*k<=Q.coin;
+  go.textContent=res?'つぎのレース':run?'レース中…':nx>=0?`決定（つぎはプレイヤー${nx+1}）`:'スタート';
+  go.disabled=run||(bet&&!ok)||(res&&!alive().length);
+  $('#reset').hidden=!(alive().length===0&&!run);
+  $('#reset').textContent=n>1?'みんなのコインを1000に戻す':'コインを1000に戻す';
+}
+function finish(){
+  const rest=S_.R.filter(r=>!S_.fin.includes(r.i)).sort((a,b)=>b.x-a.x).map(r=>r.i);
+  const top=[...S_.fin,...rest].slice(0,3),wl=top[0],wc=S_.R[wl].c,n=PL.length;
+  PL.forEach(p=>{p.pay=0;if(p.stake>0)p.picks.forEach(c=>{const L=S_.R.findIndex(r=>r.c===c),won=p.kind==='win'?c===wc:top.some(l=>S_.R[l].c===c);if(won)p.pay+=Math.floor(p.stake*odd[p.kind][L])});p.net=p.pay-p.tot;p.coin+=p.pay;p.bet=Math.min(p.bet,Math.max(p.coin,1))});
+  save();phase='res';cp=alive()[0]??0;
+  const med=['🥇','🥈','🥉'],res=$('#res');res.hidden=false;
+  const podium=`<ol style="list-style:none;padding:0;margin:0 0 8px">${top.map((l,k)=>`<li>${med[k]} ${C[S_.R[l].c].e} ${C[S_.R[l].c].n}</li>`).join('')}</ol>`;
+  if(n===1){const p=PL[0];
+    res.innerHTML=`<p class="big ${p.net>0?'win':'lose'}">${p.pay>0?'的中！':'ハズレ…'} 払い戻し ${p.pay}、収支 ${p.net>=0?'+':'−'}${Math.abs(p.net)} コイン</p>`+podium}
+  else res.innerHTML=podium+'<ul style="list-style:none;padding:0;margin:0">'+PL.map((p,i)=>
+    `<li>プレイヤー${i+1}：${p.stake>0?`${p.picks.map(c=>C[c].e).join('')}${p.kind==='win'?'単勝':'複勝'} 払戻 ${p.pay}、収支 ${p.net>=0?'+':'−'}${Math.abs(p.net)}`:'脱落'}（残り ${p.coin}）</li>`).join('')+'</ul>';
+  ui();
+}
+$('#lanes').addEventListener('change',e=>{if(e.target.name==='p'){const c=+e.target.value,a=PL[cp].picks;PL[cp].picks=e.target.checked?[...a,c]:a.filter(x=>x!==c);ui()}});
+$('#chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b&&!b.disabled){PL[cp].bet=+b.dataset.v;ui()}});
+$('#kind').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b&&!b.disabled){PL[cp].kind=b.dataset.k;ui()}});
+$('#ppl').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b||b.disabled||+b.dataset.n===PL.length)return;PL=mk(+b.dataset.n);newRace()});
+$('#go').addEventListener('click',()=>{
+  if(phase==='res'){newRace();return}
+  const Q=PL[cp];if(phase!=='bet'||!Q.picks.length||Q.bet<1||Q.bet*Q.picks.length>Q.coin)return;
+  const nx=nextAlive(cp);
+  if(nx>=0){cp=nx;ui();return}
+  PL.forEach(p=>{p.stake=p.coin>0&&p.picks.length&&p.bet*p.picks.length<=p.coin?p.bet:0;p.tot=p.stake*p.picks.length;p.coin-=p.tot});
+  save();cp=0;phase='run';last=0;ui();
+  stage.scrollIntoView({block:'nearest',behavior:'smooth'});
+});
+$('#reset').addEventListener('click',()=>{PL.forEach(p=>{p.coin=1000;p.bet=100});save();cp=0;if(phase==='res')newRace();else ui()});
+newRace();
+$('#vw').addEventListener('click',e=>{view=view==='top'?'follow':'top';e.target.textContent=view==='top'?'追いかける':'上から見る'});
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
